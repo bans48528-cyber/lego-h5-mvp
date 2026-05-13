@@ -363,6 +363,10 @@ THREE.LDRLoader.prototype.parse = function(data, defaultID) {
 		part.ldraw_org = parts.slice(2).join(" ");
                 saveThisCommentLine = false;
 	    }
+	    else if(parts[1] === "CustomBrick") {
+		part.customBrick = true;
+                saveThisCommentLine = false;
+	    }
 	    else if(is("!CMDLINE")) {
 		part.preferredColor = parseInt(parts[2].substring(2));
                 saveThisCommentLine = false;
@@ -1946,6 +1950,7 @@ THREE.LDRPartType = function() {
     this.replacement;
     this.inlined;
     this.ldraw_org;
+    this.customBrick = false;
     this.geometry;
     this.cnt = -1;
     this.cleanSteps = false;
@@ -2011,6 +2016,9 @@ THREE.LDRPartType.prototype.pack = function(loader) {
     ret.md = this.modelDescription;
     ret.e = this.encodeHeader();
     ret.d = this.ldraw_org;
+    if(this.customBrick) {
+        ret.cb = 1;
+    }
     if(!!this.preview) {
 	ret.p = this.encodePreview();
     }
@@ -2033,6 +2041,7 @@ THREE.LDRPartType.prototype.unpack = function(obj) {
     this.inlined = 'IDB';
     this.isPart = true;
     this.ldraw_org = obj.d;
+    this.customBrick = obj.cb === 1;
     if(obj.p) {
 	let parts = obj.p.split(' ');
 	let colorID = parseInt(parts[0]);
@@ -2379,6 +2388,9 @@ THREE.LDRPartType.prototype.computeIsPart = function(loader) {
     // Simple checks:
     if(this.steps.length !== 1) {
         return false; // No steps in parts.
+    }
+    if(this.customBrick) {
+        return true;
     }
     let s = this.steps[0];
     if(s.hasPrimitives()) {

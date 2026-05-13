@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LEGO 搭建说明</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #161616;
+        --muted: #666;
+        --line: #d8d8d8;
+        --panel: #fff;
+        --soft: #f5f7fb;
+        --yellow: #ffd83d;
+        --blue: #246bfe;
+        --green: #138a57;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #fffdf1 0, #f7f9fc 230px, #fff 100%);
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 48px;
+      }
+
+      header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px 0 22px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 34px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .tagline {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .status {
+        min-height: 22px;
+        color: var(--green);
+        font-size: 14px;
+        text-align: right;
+      }
+
+      .section {
+        margin-top: 22px;
+      }
+
+      .section_head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .import_panel {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 16px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .import_title {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .import_copy {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .file_input {
+        width: 0.1px;
+        height: 0.1px;
+        opacity: 0;
+        overflow: hidden;
+        position: absolute;
+        z-index: -1;
+      }
+
+      .button,
+      .model_button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        border: 1px solid #111;
+        border-radius: 8px;
+        background: var(--yellow);
+        color: #111;
+        font-size: 15px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .button {
+        padding: 0 18px;
+        white-space: nowrap;
+      }
+
+      .model_grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        align-items: stretch;
+      }
+
+      .model_card {
+        display: grid;
+        grid-template-rows: auto minmax(88px, 1fr) 58px;
+        min-height: 0;
+        max-height: none;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .preview {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        height: auto;
+        overflow: hidden;
+        padding: 10px;
+        background:
+          linear-gradient(135deg, rgba(255, 216, 61, 0.25), transparent 45%),
+          linear-gradient(315deg, rgba(36, 107, 254, 0.16), transparent 46%),
+          var(--soft);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .preview img {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+
+      .placeholder_brick {
+        width: 84px;
+        height: 54px;
+        position: relative;
+        border: 3px solid #222;
+        border-radius: 7px;
+        background: var(--yellow);
+        box-shadow: 10px 10px 0 #222;
+      }
+
+      .placeholder_brick:before,
+      .placeholder_brick:after {
+        content: "";
+        position: absolute;
+        top: -18px;
+        width: 22px;
+        height: 22px;
+        border: 3px solid #222;
+        border-radius: 50%;
+        background: var(--yellow);
+      }
+
+      .placeholder_brick:before {
+        left: 14px;
+      }
+
+      .placeholder_brick:after {
+        right: 14px;
+      }
+
+      .model_body {
+        padding: 14px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .model_name {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.25;
+        min-height: 46px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .model_meta {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        word-break: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .model_button {
+        align-self: end;
+        margin: 0 14px 14px;
+        width: calc(100% - 28px);
+        padding: 0 12px;
+      }
+
+      .empty_slot {
+        border-style: dashed;
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .empty_slot .preview {
+        background: repeating-linear-gradient(
+          -45deg,
+          #f4f4f4,
+          #f4f4f4 12px,
+          #ececec 12px,
+          #ececec 24px
+        );
+      }
+
+      @media (max-width: 840px) {
+        .model_grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 620px) {
+        .shell {
+          width: min(100% - 22px, 1120px);
+          padding-top: 16px;
+        }
+
+        header,
+        .section_head,
+        .import_panel {
+          display: block;
+        }
+
+        h1 {
+          font-size: 28px;
+        }
+
+        .status {
+          margin-top: 8px;
+          text-align: left;
+        }
+
+        .button {
+          width: 100%;
+          margin-top: 14px;
+        }
+
+        .model_grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <h1>LEGO 搭建说明</h1>
+          <p class="tagline">导入自己的 LDraw 文件，或者打开网站内置模型。</p>
+        </div>
+        <div id="status" class="status" aria-live="polite"></div>
+      </header>
+
+      <section class="section" aria-labelledby="import-title">
+        <div class="section_head">
+          <h2 id="import-title">导入文件</h2>
+          <span class="hint">支持 .ldr / .mpd / .dat，可多选</span>
+        </div>
+        <div class="import_panel">
+          <div>
+            <p class="import_title">查看本地 LDraw 文件</p>
+            <p class="import_copy">手机和电脑都通过系统文件选择器读取文件内容，不依赖本地路径；如果模型引用了同目录子文件，请一起选择。</p>
+          </div>
+          <label class="button" for="local_file">选择文件</label>
+          <input id="local_file" class="file_input" type="file" accept=".ldr,.mpd,.dat,text/plain" multiple>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="models-title">
+        <div class="section_head">
+          <h2 id="models-title">已有模型</h2>
+          <span class="hint">把模型和预览图放进预留目录后，在配置列表里添加即可。</span>
+        </div>
+        <div id="model_grid" class="model_grid"></div>
+      </section>
+    </main>
+
+    <script src="js/case-models.js"></script>
+    <script>
+      /*
+        Add your own built-in models here.
+        1. Put LDR/MPD files in models/
+        2. Put preview images in model-previews/
+        3. Add a row with name, file, preview, and category.
+      */
+      const MODEL_CATALOG = window.LEGO_MODEL_CATALOG || [];
+
+      const statusElement = document.getElementById("status");
+      const fileInput = document.getElementById("local_file");
+      const modelGrid = document.getElementById("model_grid");
+
+      function countBuildSteps(text) {
+        let count = 0;
+        let stepHasContent = false;
+
+        function closeStep() {
+          if (stepHasContent) {
+            count++;
+          }
+          stepHasContent = false;
+        }
+
+        text.split(/\r?\n/).forEach(line => {
+          const trimmed = line.trim();
+          if (/^0\s+(?:STEP|ROTSTEP)\b/i.test(trimmed)) {
+            closeStep();
+          }
+          else if (/^[1-5]\s+/.test(trimmed)) {
+            stepHasContent = true;
+          }
+        });
+        closeStep();
+        return count;
+      }
+
+      function hasBuildSteps(text) {
+        return countBuildSteps(text) > 1;
+      }
+
+      function openTarget(params, hasSteps) {
+        window.location.href = (hasSteps ? "sample_instructions.htm?" : "model_viewer.htm?") + params.toString();
+      }
+
+      async function openModel(model) {
+        if (!model.file) {
+          statusElement.textContent = "这个位置已预留给新的模型。";
+          return;
+        }
+
+        const params = new URLSearchParams();
+        params.set("model", model.file);
+        params.set("title", model.name);
+        statusElement.textContent = "正在检查模型步骤...";
+
+        try {
+          const response = await fetch(model.file);
+          if (!response.ok) {
+            throw new Error("模型文件读取失败");
+          }
+          openTarget(params, hasBuildSteps(await response.text()));
+        }
+        catch (error) {
+          statusElement.textContent = "无法检查步骤，先打开模型查看。";
+          openTarget(params, false);
+        }
+      }
+
+      function buildPreview(model) {
+        const preview = document.createElement("div");
+        preview.className = "preview";
+
+        if (model.preview) {
+          const image = document.createElement("img");
+          image.src = model.preview;
+          image.alt = model.name;
+          image.loading = "lazy";
+          preview.appendChild(image);
+        }
+        else {
+          const brick = document.createElement("div");
+          brick.className = "placeholder_brick";
+          brick.setAttribute("aria-hidden", "true");
+          preview.appendChild(brick);
+        }
+
+        return preview;
+      }
+
+      function renderModels() {
+        modelGrid.innerHTML = "";
+        MODEL_CATALOG.forEach(model => {
+          const card = document.createElement("article");
+          card.className = "model_card" + (model.file ? "" : " empty_slot");
+
+          const body = document.createElement("div");
+          body.className = "model_body";
+
+          const name = document.createElement("h3");
+          name.className = "model_name";
+          name.textContent = model.name;
+
+          const meta = document.createElement("p");
+          meta.className = "model_meta";
+          meta.textContent = model.file || "models/your-model.mpd";
+
+          const button = document.createElement("button");
+          button.className = "model_button";
+          button.type = "button";
+          button.textContent = model.file ? "查看模型" : "预留位置";
+          button.addEventListener("click", () => openModel(model));
+
+          body.append(name, meta);
+          card.append(buildPreview(model), body, button);
+          modelGrid.appendChild(card);
+        });
+      }
+
+      function readLocalFile(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve([file.name, reader.result]);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file);
+        });
+      }
+
+      fileInput.addEventListener("change", async () => {
+        const files = Array.from(fileInput.files || []);
+        if (files.length === 0) {
+          return;
+        }
+
+        const mainFile = files[0];
+        statusElement.textContent = "正在读取 " + files.length + " 个文件...";
+
+        try {
+          const entries = await Promise.all(files.map(readLocalFile));
+          const fileMap = {};
+          entries.forEach(([name, text]) => {
+            fileMap[name.toLowerCase()] = text;
+          });
+
+          sessionStorage.setItem("legoLocalModelText", fileMap[mainFile.name.toLowerCase()]);
+          sessionStorage.setItem("legoLocalModelFiles", JSON.stringify(fileMap));
+          sessionStorage.setItem("legoLocalModelName", mainFile.name);
+          sessionStorage.setItem("legoLocalModelTimestamp", String(Date.now()));
+
+          const params = new URLSearchParams();
+          params.set("source", "local");
+          params.set("name", mainFile.name);
+          openTarget(params, hasBuildSteps(fileMap[mainFile.name.toLowerCase()] || ""));
+        }
+        catch (error) {
+          statusElement.textContent = "文件读取失败，请重新选择。";
+        }
+      });
+
+      renderModels();
+    </script>
+  </body>
+</html>

@@ -41,7 +41,7 @@ LDR.InstructionsManager = function(modelUrl, modelID, modelColor, mainImage, ref
         clickDone: () => self.clickDone(),
         toggleEditor: () => window.location = options.editorToggleLocation + '&step=' + self.currentStep,
     };
-    this.ldrButtons = new LDR.Buttons(actions, canvasHolder, true, modelID, mainImage, options);
+    this.ldrButtons = new LDR.Buttons(actions, canvasHolder, true, options.homeLink || modelID, mainImage, options);
     this.controls = new THREE.OrbitControls(this.camera, this.canvas);
     this.controls.noTriggerSize = 0.1;
     this.controls.screenSpacePanning = true;
@@ -233,7 +233,37 @@ LDR.InstructionsManager = function(modelUrl, modelID, modelColor, mainImage, ref
 	    }
 	}
 	else { // Not loaded from storage. Proceed with normal loading:
-            self.ldrLoader.load(modelUrl);
+            if(options.modelText) {
+                if(options.localFiles) {
+                    let originalLoad = self.ldrLoader.load.bind(self.ldrLoader);
+                    self.ldrLoader.load = function(id) {
+                        let lowerID = id.toLowerCase().replace(/\\/g, '/').split('/').pop();
+                        if(options.localFiles.hasOwnProperty(lowerID)) {
+                            id = id.replace('\\', '/');
+                            if(this.partTypes[id]) {
+                                if(this.partTypes[id] !== true) {
+                                    this.reportProgress(id);
+                                }
+                                return;
+                            }
+                            this.partTypes[id] = true;
+                            this.unloadedFiles++;
+                            this.parse(options.localFiles[lowerID], id);
+                            this.unloadedFiles--;
+                            this.reportProgress(id);
+                            return;
+                        }
+                        originalLoad(id);
+                    };
+                }
+                self.ldrLoader.unloadedFiles++;
+                self.ldrLoader.parse(options.modelText, modelUrl);
+                self.ldrLoader.unloadedFiles--;
+                self.ldrLoader.reportProgress(modelUrl);
+            }
+            else {
+                self.ldrLoader.load(modelUrl);
+            }
 	}
     }
     let onStorageReady = function() {
@@ -241,7 +271,7 @@ LDR.InstructionsManager = function(modelUrl, modelID, modelColor, mainImage, ref
             LDR.Studs.makeGenerators('', LDR.Options.studHighContrast, LDR.Options.studLogo);
         }
         self.ldrLoader = new THREE.LDRLoader(onLoad, self.storage, options);
-        if(self.storage) {
+        if(self.storage && !options.modelText) {
             self.storage.retrieveInstructionsFromStorage(self.ldrLoader, onInstructionsLoaded);
         }
         else {

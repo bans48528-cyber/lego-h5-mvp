@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LEGO 模型查看</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #151515;
+        --muted: #5f6368;
+        --line: #d9dde5;
+        --panel: rgba(255, 255, 255, 0.92);
+        --yellow: #ffd83d;
+        --blue: #246bfe;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background: #f6f8fb;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      .toolbar {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        min-height: 56px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 8px 28px rgba(24, 32, 44, 0.12);
+        backdrop-filter: blur(8px);
+      }
+
+      .title_block {
+        min-width: 0;
+      }
+
+      h1 {
+        margin: 0;
+        overflow: hidden;
+        font-size: 18px;
+        line-height: 1.2;
+        letter-spacing: 0;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .status {
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border: 1px solid #111;
+        border-radius: 8px;
+        background: #fff;
+        color: #111;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .button[hidden] {
+        display: none !important;
+      }
+
+      .button.primary {
+        background: var(--yellow);
+      }
+
+      .button:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
+
+      .loading {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 84px 18px 18px;
+        color: var(--muted);
+        font-size: 15px;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .error {
+        color: #b42318;
+      }
+
+      @media (max-width: 680px) {
+        .toolbar {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+        }
+
+        .actions {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .button {
+          min-width: 0;
+          padding: 0 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="toolbar">
+      <a class="button" href="index.html">返回首页</a>
+      <div class="title_block">
+        <h1 id="model_title">LEGO 模型查看</h1>
+        <div id="status" class="status" aria-live="polite">正在加载模型...</div>
+      </div>
+      <div class="actions">
+        <button id="reset_view" class="button" type="button" disabled>重置视角</button>
+        <a id="instructions_link" class="button primary" href="sample_instructions.htm" hidden>搭建步骤</a>
+      </div>
+    </header>
+    <div id="loading" class="loading">正在加载零件库和模型...</div>
+
+    <script src="js/three.min.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/CopyShader.js"></script>
+    <script src="js/Pass.js"></script>
+    <script src="js/OutlinePass.js"></script>
+    <script src="js/ShaderPass.js"></script>
+    <script src="js/RenderPass.js"></script>
+    <script src="js/MaskPass.js"></script>
+    <script src="js/EffectComposer.js"></script>
+    <script src="js/colors.js"></script>
+    <script src="js/LDRShaders.js"></script>
+    <script src="js/LDRColorMaterials.js"></script>
+    <script src="js/LDRGeometries.js"></script>
+    <script src="js/LDRLoader.js"></script>
+    <script src="js/LDRGenerator.js"></script>
+    <script src="js/LDRStuds.js"></script>
+    <script src="js/StudioTexmap.js"></script>
+    <script src="js/LDRAssemblies.js"></script>
+    <script src="js/LDCadGenerator.js"></script>
+
+    <script>
+      const statusElement = document.getElementById("status");
+      const titleElement = document.getElementById("model_title");
+      const loadingElement = document.getElementById("loading");
+      const resetButton = document.getElementById("reset_view");
+      const instructionsLink = document.getElementById("instructions_link");
+
+      let startTime = Date.now();
+      let missingPartCount = 0;
+      let rendered = false;
+      let modelSize = 1;
+      let modelTitle = "LEGO 模型查看";
+
+      function getModelNameFromPath(path) {
+        return decodeURIComponent((path || "").replace(/\\/g, "/").split("/").pop() || "LEGO 模型");
+      }
+
+      function getViewerParameters() {
+        const params = new URLSearchParams(location.search);
+        let modelText = null;
+        let modelFiles = null;
+        let model = params.get("model") || "models/corvette_full.mpd";
+        let name = params.get("title") || getModelNameFromPath(model);
+        let error = false;
+
+        if (params.get("source") === "local") {
+          modelText = sessionStorage.getItem("legoLocalModelText");
+          try {
+            modelFiles = JSON.parse(sessionStorage.getItem("legoLocalModelFiles") || "{}");
+          }
+          catch (e) {
+            modelFiles = {};
+          }
+          name = params.get("name") || sessionStorage.getItem("legoLocalModelName") || "local-model.ldr";
+          model = "local/" + name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+          if (!modelText) {
+            showError("没有找到刚才导入的文件内容，请返回首页重新选择文件。");
+            error = true;
+          }
+        }
+
+        const stepParams = new URLSearchParams(location.search);
+        if (params.get("source") !== "local") {
+          stepParams.set("model", model);
+          stepParams.set("title", name);
+        }
+        instructionsLink.href = "sample_instructions.htm?" + stepParams.toString();
+        instructionsLink.hidden = params.get("steps") !== "1";
+
+        return {
+          model: model,
+          modelText: modelText,
+          modelFiles: modelFiles,
+          name: name,
+          error: error
+        };
+      }
+
+      function idToUrl(id) {
+        const normalizedID = id.replace(/\\/g, "/");
+        const lowerID = normalizedID.toLowerCase();
+        const encodedOriginalID = encodeURIComponent(normalizedID).replace(/%2F/g, "/");
+        if (!lowerID.endsWith(".dat")) {
+          return encodedOriginalID === normalizedID ? [normalizedID] : [normalizedID, encodedOriginalID];
+        }
+
+        let urls = [];
+        const encodedID = encodeURIComponent(lowerID).replace(/%2F/g, "/");
+        if (lowerID.startsWith("48/") || lowerID.startsWith("8/")) {
+          urls = [
+            "official/p/" + lowerID,
+            "unofficial/p/" + lowerID
+          ];
+        }
+        else if (lowerID.startsWith("s/")) {
+          urls = [
+            "official/parts/" + lowerID,
+            "unofficial/parts/" + lowerID,
+            "ldraw_parts/" + lowerID,
+            "ldraw_unofficial/" + lowerID
+          ];
+        }
+        else if (lowerID.match(/[a-z][a-z].*\.dat/)) {
+          urls = [
+            "official/p/" + lowerID,
+            "official/parts/" + lowerID,
+            "unofficial/p/" + lowerID,
+            "unofficial/parts/" + lowerID
+          ];
+        }
+        else {
+          urls = [
+            "official/parts/" + lowerID,
+            "official/p/" + lowerID,
+            "unofficial/parts/" + lowerID,
+            "unofficial/p/" + lowerID
+          ];
+        }
+
+        urls.push("ldraw_parts/" + lowerID, "ldraw_unofficial/" + lowerID);
+        if (normalizedID !== lowerID) {
+          urls.push(
+            "official/parts/" + encodedOriginalID,
+            "official/p/" + encodedOriginalID,
+            "unofficial/parts/" + encodedOriginalID,
+            "unofficial/p/" + encodedOriginalID,
+            "ldraw_parts/" + encodedOriginalID,
+            "ldraw_unofficial/" + encodedOriginalID
+          );
+        }
+        if (encodedID !== lowerID) {
+          urls.push(encodedID);
+        }
+        return urls;
+      }
+
+      function installLocalFileLoader(loader, localFiles) {
+        if (!localFiles) {
+          return;
+        }
+
+        const originalLoad = loader.load.bind(loader);
+        loader.load = function(id) {
+          const normalizedID = id.toLowerCase().replace(/\\/g, "/");
+          const fileName = normalizedID.split("/").pop();
+          const text = localFiles[normalizedID] || localFiles[fileName];
+          if (!text) {
+            originalLoad(id);
+            return;
+          }
+
+          id = id.replace(/\\/g, "/");
+          if (this.partTypes[id]) {
+            if (this.partTypes[id] !== true) {
+              this.reportProgress(id);
+            }
+            return;
+          }
+
+          this.partTypes[id] = true;
+          this.unloadedFiles++;
+          this.parse(text, id);
+          this.unloadedFiles--;
+          this.reportProgress(id);
+        };
+      }
+
+      function showError(message) {
+        statusElement.textContent = message;
+        statusElement.classList.add("error");
+        loadingElement.textContent = message;
+        loadingElement.classList.add("error");
+      }
+
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000000);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf6f8fb);
+
+      const baseObject = new THREE.Group();
+      const opaqueObject = new THREE.Group();
+      const sixteenObject = new THREE.Group();
+      const transObject = new THREE.Group();
+      baseObject.add(opaqueObject);
+      baseObject.add(sixteenObject);
+      baseObject.add(transObject);
+      scene.add(baseObject);
+
+      const mc = new LDR.MeshCollector(opaqueObject, sixteenObject, transObject);
+      const renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio || 1);
+      document.body.appendChild(renderer.domElement);
+
+      let composer = null;
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.addEventListener("change", render);
+
+      function render() {
+        if (composer === null) {
+          renderer.render(scene, camera);
+        }
+        else {
+          composer.render();
+        }
+      }
+
+      function fitCamera() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        camera.left = -width;
+        camera.right = width;
+        camera.top = height;
+        camera.bottom = -height;
+        camera.near = Math.max(0.1, modelSize / 10000);
+        camera.far = Math.max(1000000, modelSize * 10);
+        camera.zoom = Math.max(0.01, Math.min(width, height) * 1.35 / modelSize);
+        camera.updateProjectionMatrix();
+      }
+
+      function onWindowResize() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        fitCamera();
+        renderer.setSize(width, height);
+
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(new THREE.RenderPass(scene, camera));
+        if (!mc.attachGlowPasses(width, height, scene, camera, composer)) {
+          composer = null;
+        }
+        render();
+      }
+
+      function hasUsableBounds(box) {
+        return Number.isFinite(box.min.x) &&
+          Number.isFinite(box.min.y) &&
+          Number.isFinite(box.min.z) &&
+          Number.isFinite(box.max.x) &&
+          Number.isFinite(box.max.y) &&
+          Number.isFinite(box.max.z) &&
+          box.max.x >= box.min.x &&
+          box.max.y >= box.min.y &&
+          box.max.z >= box.min.z;
+      }
+
+      function frameModel() {
+        const box = mc.boundingBox;
+        if (!hasUsableBounds(box)) {
+          showError("模型已读取，但没有可显示的几何内容。");
+          return;
+        }
+
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        baseObject.position.set(-center.x, -center.y, -center.z);
+        modelSize = Math.max(1, box.min.distanceTo(box.max));
+
+        camera.position.set(modelSize, modelSize * 0.72, modelSize);
+        camera.lookAt(new THREE.Vector3());
+        controls.target.set(0, 0, 0);
+        controls.update();
+        controls.saveState();
+        onWindowResize();
+
+        resetButton.disabled = false;
+        loadingElement.style.display = "none";
+        rendered = true;
+
+        const seconds = ((Date.now() - startTime) / 1000).toFixed(1);
+        statusElement.textContent = missingPartCount > 0
+          ? "已加载，用方块代替了 " + missingPartCount + " 个缺失零件。"
+          : "已加载，用时 " + seconds + " 秒。";
+      }
+
+      function onLoad() {
+        try {
+          ldrLoader.generate(14, mc);
+          frameModel();
+        }
+        catch (error) {
+          console.error(error);
+          showError("模型渲染失败，请检查文件是否为有效的 LDraw 模型。");
+        }
+      }
+
+      const selected = getViewerParameters();
+      modelTitle = selected.name;
+      titleElement.textContent = modelTitle;
+      document.title = modelTitle + " - LEGO 模型查看";
+      statusElement.textContent = "正在加载 " + modelTitle + "...";
+
+      LDR.Studs.makeGenerators("", 0, 1);
+      const ldrLoader = new THREE.LDRLoader(onLoad, null, {
+        buildAssemblies: true,
+        cleanUpPrimitivesAndSubParts: false,
+        idToUrl: idToUrl,
+        onProgress: function(id) {
+          if (!rendered) {
+            statusElement.textContent = "正在读取 " + id + "...";
+          }
+        },
+        onWarning: function(warning) {
+          console.warn(warning);
+        },
+        onError: function(error) {
+          missingPartCount++;
+          console.warn(error);
+        }
+      });
+
+      installLocalFileLoader(ldrLoader, selected.modelFiles);
+
+      resetButton.addEventListener("click", function() {
+        controls.reset();
+        fitCamera();
+        render();
+      });
+      window.addEventListener("resize", onWindowResize, false);
+
+      if (selected.error) {
+        resetButton.disabled = true;
+      }
+      else if (selected.modelText) {
+        ldrLoader.unloadedFiles++;
+        ldrLoader.parse(selected.modelText, selected.model);
+        ldrLoader.unloadedFiles--;
+        ldrLoader.reportProgress(selected.model);
+      }
+      else {
+        ldrLoader.load(selected.model);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+# Local preview logs
+preview-server.*.log
+
+# A full local LDraw library can contain tens of thousands of files.
+# The repo keeps only the part files that are explicitly committed.
+official/
