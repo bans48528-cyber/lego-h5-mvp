@@ -28,8 +28,8 @@
     <script src="js/LDRSVG.js"></script>
     <script src="js/LDROptions.js"></script>
     <script src="js/ClientStorage.js"></script>
-    <script src="js/LDRGeometries.js?v=20260513-6"></script>
-    <script src="js/LDRLoader.js?v=20260513-6"></script>
+    <script src="js/LDRGeometries.js?v=20260513-7"></script>
+    <script src="js/LDRLoader.js?v=20260513-7"></script>
     <script src="js/LDRStepHandler.js"></script>
     <script src="js/RectanglePacking.js"></script>
     <script src="js/LDRPLIBuilder.js"></script>
@@ -142,7 +142,7 @@
           let modelFiles = null;
           let modelName = params.get('title') || 'Corvette';
           let model = params.get('model') || 'models/corvette_full.mpd';
-          let timestamp = '1970-01-01 00:00:00';
+          let timestamp = params.get('v') || '20260513-7';
 
           if(params.get('source') === 'local') {
               modelText = sessionStorage.getItem('legoLocalModelText');
