@@ -1970,6 +1970,9 @@ THREE.LDRPartType = function() {
 THREE.LDRPartType.prototype.setReferencedFrom = function(ldrLoader) {
     function handle(sm, ID) {
 	let pt = ldrLoader.getPartType(sm.ID);
+	if(!pt) {
+	    return;
+	}
 	if(pt.isPart && !pt.referencedFrom.hasOwnProperty(ID)) {
 	    pt.referencedFrom[ID] = true;
 	    pt.references++;
