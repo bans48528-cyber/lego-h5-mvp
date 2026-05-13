@@ -149,6 +149,9 @@ LDR.PLIBuilder.prototype.createClickMap = function(step) {
 	}
 	else {
 	    let pt = this.getPartType(partID);
+            if(!Number.isFinite(pt.dx) || !Number.isFinite(pt.dy) || pt.dx <= 0 || pt.dy <= 0) {
+                return;
+            }
 	    let b = pt.pliMC.boundingBox;
 	    icon = {key: key,
 		    partID: partID,
@@ -209,6 +212,10 @@ LDR.PLIBuilder.prototype.drawPLIForStep = function(fillHeight, step, maxWidth, m
 
     // Find, sort and set up icons to show:
     this.createClickMap(step);
+    if(this.clickMap.length === 0) {
+        this.canvas.style.display = 'none';
+        return;
+    }
     let textHeight = (!fillHeight ? maxHeight : maxWidth) / Math.sqrt(this.clickMap.length) * 0.19;
     let [W,H] = Algorithm.PackPlis(fillHeight, maxWidth-4, maxHeight-8, this.clickMap, textHeight);
     const DPR = window.devicePixelRatio;
@@ -245,8 +252,13 @@ LDR.PLIBuilder.prototype.drawPLIForStep = function(fillHeight, step, maxWidth, m
         let y = icon.y*DPR;
 	let w = parseInt(icon.DX*scaleDown);
 	let h = parseInt(icon.DY*scaleDown);
+        if(!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+            continue;
+        }
         self.renderIcon(icon.partID, icon.c, w, h);
-	context.drawImage(self.renderer.domElement, x, y);
+        if(self.renderer.domElement.width > 0 && self.renderer.domElement.height > 0) {
+	    context.drawImage(self.renderer.domElement, x, y);
+        }
 	
         // Hack to ensure it works on Android:
         [w, h] = LDR.getScreenSize();
