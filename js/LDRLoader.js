@@ -1677,6 +1677,9 @@ THREE.LDRStep.prototype.removePrimitivesAndSubParts = function(loader) {
     let ID = this.idx;
     function handleSM(sm) {
 	let pt = loader.getPartType(sm.ID);
+	if(!pt) {
+	    return;
+	}
 	pt.removePrimitivesAndSubParts(loader, ID);
     }
     this.subModels.forEach(handleSM);
