@@ -2389,7 +2389,7 @@ THREE.LDRPartType.prototype.computeIsPart = function(loader) {
     if(this.steps.length !== 1) {
         return false; // No steps in parts.
     }
-    if(this.customBrick) {
+    if(this.customBrick && this.ID !== loader.mainModel) {
         return true;
     }
     let s = this.steps[0];
