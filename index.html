@@ -348,6 +348,7 @@
       const statusElement = document.getElementById("status");
       const fileInput = document.getElementById("local_file");
       const modelGrid = document.getElementById("model_grid");
+      const APP_VERSION = "20260513-3";
 
       function countBuildSteps(text) {
         let count = 0;
@@ -378,6 +379,7 @@
       }
 
       function openTarget(params, hasSteps) {
+        params.set("v", APP_VERSION);
         window.location.href = (hasSteps ? "sample_instructions.htm?" : "model_viewer.htm?") + params.toString();
       }
 

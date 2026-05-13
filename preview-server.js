@@ -52,7 +52,10 @@ http.createServer((request, response) => {
     }
 
     response.writeHead(200, {
-      "Content-Type": types[path.extname(file).toLowerCase()] || "application/octet-stream"
+      "Content-Type": types[path.extname(file).toLowerCase()] || "application/octet-stream",
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      "Pragma": "no-cache",
+      "Expires": "0"
     });
     response.end(data);
   });
