@@ -945,7 +945,14 @@ LDR.LDRGeometry.prototype.fromPartDescription = function(loader, pd) {
     this.rebuild = () => self.fromPartDescription(loader, pd);
     let pt = loader.getPartType(pd.ID);
     if(!pt) {
-        throw "Part not loaded: " + pd.ID;
+        if(LDR.Generator) {
+            pt = LDR.Generator.bx(4095, 63);
+            pt.ID = pt.name = pd.ID || 'missing.dat';
+            pt.modelDescription = 'Showing a box for missing part ' + (pd.ID || '(empty id)');
+        }
+        else {
+            throw "Part not loaded: " + pd.ID;
+        }
     }
     pt.ensureGeometry(loader);
 
