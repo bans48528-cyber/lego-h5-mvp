@@ -200,7 +200,7 @@ THREE.LDRLoader.prototype.parseColor = function(colorID) {
     }
     if(LDR.Colors[colorID] === undefined) {
 	// This color might be on the form "0x2995220", such as seen in 3626bps5.dat:
-	this.onWarning({message:'Unknown color "' + colorID + '". Black (0) will be shown instead.', line:i, subModel:part.ID});
+	this.onWarning({message:'Unknown color "' + colorID + '". Black (0) will be shown instead.'});
 	return 0;
     }
     return parseInt(colorID);
