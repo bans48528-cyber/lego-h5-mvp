@@ -13,6 +13,7 @@ LDR.InstructionsManager = function(modelUrl, modelID, modelColor, mainImage, ref
     this.pliMaxWidthPercentage = options.hasOwnProperty('pliMaxWidthPercentage') ? options.pliMaxWidthPercentage : 40;
     this.pliMaxHeightPercentage = options.hasOwnProperty('pliMaxHeightPercentage') ? options.pliMaxHeightPercentage : 35;
     this.animateUIElements = options.hasOwnProperty('animateUIElements') ? options.animateUIElements : false;
+    this.disablePostProcessing = options.disablePostProcessing === true;
 
     LDR.Colors.canBeOld = true;
 
@@ -497,37 +498,43 @@ LDR.InstructionsManager.prototype.onWindowResize = function(force){
     h -= this.adPeek;
     if(force || this.canvas.width !== w || this.canvas.height !== h) {
         this.renderer.setSize(w, h, true);
-        this.composer = new THREE.EffectComposer(this.renderer);
-        this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
-        let any = false;
-        if(LDR.Options && LDR.Options.showOldColors <= 1) {
-            any = true;
-            this.buildOutlinePass(w, h);
-            this.composer.addPass(this.outlinePass);            
-        }
-        else {
+        if(this.disablePostProcessing) {
+            this.composer = null;
             this.outlinePass = null;
         }
-
-	// FXAA Pass to restore antialiazing:
-	var fxaaPass = new THREE.ShaderPass( new THREE.FXAAShader() );
-	var pixelRatio = this.renderer.getPixelRatio();
-	var uniforms = fxaaPass.material.uniforms;
-	uniforms[ 'resolution' ].value.x = 1 / ( window.innerWidth * pixelRatio );
-	uniforms[ 'resolution' ].value.y = 1 / ( window.innerHeight * pixelRatio );
-	this.composer.addPass( fxaaPass );
-
-        if(this.stepHandler) { // Attach glow for all mesh collectors up until this step:
-            let map = {};
-            this.stepHandler.getGlowObjects(map);
-            
-            if(LDR.attachGlowPassesForObjects(map, w, h, this.scene, this.camera, this.composer)) {
+        else {
+            this.composer = new THREE.EffectComposer(this.renderer);
+            this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
+            let any = false;
+            if(LDR.Options && LDR.Options.showOldColors <= 1) {
                 any = true;
+                this.buildOutlinePass(w, h);
+                this.composer.addPass(this.outlinePass);            
             }
-        }
+            else {
+                this.outlinePass = null;
+            }
 
-        if(!any) {
-            this.composer = null;
+	    // FXAA Pass to restore antialiazing:
+	    var fxaaPass = new THREE.ShaderPass( new THREE.FXAAShader() );
+	    var pixelRatio = this.renderer.getPixelRatio();
+	    var uniforms = fxaaPass.material.uniforms;
+	    uniforms[ 'resolution' ].value.x = 1 / ( window.innerWidth * pixelRatio );
+	    uniforms[ 'resolution' ].value.y = 1 / ( window.innerHeight * pixelRatio );
+	    this.composer.addPass( fxaaPass );
+
+            if(this.stepHandler) { // Attach glow for all mesh collectors up until this step:
+                let map = {};
+                this.stepHandler.getGlowObjects(map);
+                
+                if(LDR.attachGlowPassesForObjects(map, w, h, this.scene, this.camera, this.composer)) {
+                    any = true;
+                }
+            }
+
+            if(!any) {
+                this.composer = null;
+            }
         }
     }
     this.camera.left   = -this.canvas.clientWidth*0.95;

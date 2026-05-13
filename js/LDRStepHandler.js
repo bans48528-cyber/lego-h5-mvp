@@ -243,6 +243,10 @@ LDR.StepHandler.prototype.nextStep = function(skipDrawing) {
 	    this.setCurrentBounds(meshCollector.boundingBox);
 
             meshCollector.setOldValue(false); // Ensure outlines shown.
+            if(!skipDrawing) {
+                meshCollector.draw(false);
+                meshCollector.setVisible(true);
+            }
 
 	    // Helper. Uncomment next line for bounding boxes:
 	    //this.opaqueObject.add(new THREE.Box3Helper(meshCollector.boundingBox, 0xff0000));
