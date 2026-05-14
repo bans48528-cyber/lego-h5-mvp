@@ -379,6 +379,8 @@ LDR.StepHandler.prototype.moveTo = function(to) {
     }
 
     this.cleanUpAfterWalking();
+    this.updateMeshCollectors();
+    this.cleanUpAfterWalking();
 }
 
 /*

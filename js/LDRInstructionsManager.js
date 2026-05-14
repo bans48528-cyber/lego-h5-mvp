@@ -291,7 +291,11 @@ LDR.InstructionsManager = function(modelUrl, modelID, modelColor, mainImage, ref
 	this.setUpOptions();
     }
     this.onWindowResize();
-    if(LDR.STORAGE) {
+    if(options.disableStorage) {
+        this.storage = null;
+        onStorageReady();
+    }
+    else if(LDR.STORAGE) {
         this.storage = new LDR.STORAGE(onStorageReady);
     }
     else {
